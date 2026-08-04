@@ -32,23 +32,22 @@ export default function App() {
     setLoadingMap(prev => ({ ...prev, [menuId]: true }));
 
     try {
-      const response = await fetch(`/api/sheets/${menuId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response but received ${contentType || 'non-JSON'}`);
-      }
-      const data: DashboardDataResponse = await response.json();
-      setDashboardDataMap(prev => ({ ...prev, [menuId]: data }));
-    } catch (err) {
-      console.warn(`API fetch failed for ${menuId}, attempting direct Google Sheet fetch:`, err);
+      // Primary: Fetch Google Sheets directly from browser (fast & bypasses Vercel backend constraints)
+      const directData = await fetchGoogleSheetDirectly(menuId);
+      setDashboardDataMap(prev => ({ ...prev, [menuId]: directData }));
+    } catch (directErr) {
+      console.warn(`Direct Google Sheet fetch failed for ${menuId}, attempting API fallback:`, directErr);
       try {
-        const directData = await fetchGoogleSheetDirectly(menuId);
-        setDashboardDataMap(prev => ({ ...prev, [menuId]: directData }));
-      } catch (directErr) {
-        console.error(`Direct Google Sheet fetch also failed for ${menuId}:`, directErr);
+        const response = await fetch(`/api/sheets/${menuId}`);
+        if (response.ok) {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data: DashboardDataResponse = await response.json();
+            setDashboardDataMap(prev => ({ ...prev, [menuId]: data }));
+          }
+        }
+      } catch (apiErr) {
+        console.error(`Both direct and API fetch failed for ${menuId}:`, apiErr);
       }
     } finally {
       setLoadingMap(prev => ({ ...prev, [menuId]: false }));
