@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import JSZip from 'jszip';
 import { MENU_CONFIGS } from '../data/menuConfig';
 import { MOCK_DASHBOARD_DATA } from '../data/mockData';
 import { DashboardKey, DashboardDataResponse, StatusCategory, SheetRowData } from '../types/dashboard';
@@ -168,113 +169,107 @@ export async function fetchGoogleSheetDirectly(menuId: DashboardKey): Promise<Da
   const htmlComboStatusMap = new Map<string, StatusCategory>();
   let isZipParsed = false;
 
-  if (typeof window === 'undefined') {
-    try {
-      const zipUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=zip`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 9000);
-      const zipRes = await fetch(zipUrl, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      });
-      clearTimeout(timeoutId);
+  try {
+    const zipUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=zip`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
+    const zipRes = await fetch(zipUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    clearTimeout(timeoutId);
 
-      if (zipRes.ok) {
-        const AdmZipModule = await import('adm-zip');
-        const AdmZipClass: any = AdmZipModule.default || AdmZipModule;
-        const buffer = Buffer.from(await zipRes.arrayBuffer());
-        const zip = new AdmZipClass(buffer);
-        const entries = zip.getEntries();
-        const htmlEntry = entries.find((e: any) => e.entryName.endsWith('.html'));
+    if (zipRes.ok) {
+      const zip = await JSZip.loadAsync(await zipRes.arrayBuffer());
+      const htmlFileName = Object.keys(zip.files).find(name => name.endsWith('.html'));
 
-        if (htmlEntry) {
-          isZipParsed = true;
-          const htmlText = htmlEntry.getData().toString('utf8');
-          const styleMatch = htmlText.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-          const styleText = styleMatch ? styleMatch[1] : '';
+      if (htmlFileName && zip.files[htmlFileName]) {
+        isZipParsed = true;
+        const htmlText = await zip.files[htmlFileName].async('string');
+        const styleMatch = htmlText.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+        const styleText = styleMatch ? styleMatch[1] : '';
 
-          const classBgMap: Record<string, string> = {};
-          const sRules = styleText.match(/\.s\d+\{[^}]*\}/gi) || [];
-          sRules.forEach((r: string) => {
-            const clsMatch = r.match(/\.s\d+/);
-            if (!clsMatch) return;
-            const cls = clsMatch[0].slice(1);
-            const bgMatch = r.match(/background-color:\s*([^;\}]+)/i);
-            if (bgMatch) {
-              classBgMap[cls] = bgMatch[1].trim().toLowerCase();
-            }
-          });
+        const classBgMap: Record<string, string> = {};
+        const sRules = styleText.match(/\.s\d+\{[^}]*\}/gi) || [];
+        sRules.forEach((r: string) => {
+          const clsMatch = r.match(/\.s\d+/);
+          if (!clsMatch) return;
+          const cls = clsMatch[0].slice(1);
+          const bgMatch = r.match(/background-color:\s*([^;\}]+)/i);
+          if (bgMatch) {
+            classBgMap[cls] = bgMatch[1].trim().toLowerCase();
+          }
+        });
 
-          const trs = htmlText.match(/<tr[\s\S]*?<\/tr>/gi) || [];
-          trs.forEach((tr: string) => {
-            let sheetRowNumber: number | null = null;
-            const rowNumMatch = tr.match(/class="row-header-wrapper"[^>]*>\s*(\d+)\s*<\/div>/i);
-            if (rowNumMatch) {
-              sheetRowNumber = parseInt(rowNumMatch[1], 10);
-            }
+        const trs = htmlText.match(/<tr[\s\S]*?<\/tr>/gi) || [];
+        trs.forEach((tr: string) => {
+          let sheetRowNumber: number | null = null;
+          const rowNumMatch = tr.match(/class="row-header-wrapper"[^>]*>\s*(\d+)\s*<\/div>/i);
+          if (rowNumMatch) {
+            sheetRowNumber = parseInt(rowNumMatch[1], 10);
+          }
 
-            const tdMatches = tr.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || [];
-            if (tdMatches.length === 0) return;
+          const tdMatches = tr.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || [];
+          if (tdMatches.length === 0) return;
 
-            const allCellValues = tdMatches.map((td: string) => td.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim());
-            const timestamp = allCellValues[0] || '';
-            const name = allCellValues[1] || '';
+          const allCellValues = tdMatches.map((td: string) => td.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim());
+          const timestamp = allCellValues[0] || '';
+          const name = allCellValues[1] || '';
 
-            let detectedStatus: StatusCategory = 'DALAM ANTRIAN PROSES';
+          let detectedStatus: StatusCategory = 'DALAM ANTRIAN PROSES';
 
-            const checkColIndices = Array.from(new Set([
-              ...columnIndices,
-              ...Array.from({ length: Math.min(14, tdMatches.length) }, (_, idx) => idx)
-            ]));
+          const checkColIndices = Array.from(new Set([
+            ...columnIndices,
+            ...Array.from({ length: Math.min(14, tdMatches.length) }, (_, idx) => idx)
+          ]));
 
-            for (const colIdx of checkColIndices) {
-              const td = tdMatches[colIdx];
-              if (!td) continue;
+          for (const colIdx of checkColIndices) {
+            const td = tdMatches[colIdx];
+            if (!td) continue;
 
-              const classMatch = td.match(/class=\"([^\"]*)\"/i);
-              if (classMatch) {
-                const classes = classMatch[1].split(/\s+/);
-                for (const cls of classes) {
-                  if (classBgMap[cls]) {
-                    const st = parseColorToStatus(classBgMap[cls]);
-                    if (st === 'SELESAI PROSES') {
-                      detectedStatus = 'SELESAI PROSES';
-                      break;
-                    } else if (st === 'ON PROSES' && (detectedStatus as StatusCategory) !== 'SELESAI PROSES') {
-                      detectedStatus = 'ON PROSES';
-                    }
+            const classMatch = td.match(/class=\"([^\"]*)\"/i);
+            if (classMatch) {
+              const classes = classMatch[1].split(/\s+/);
+              for (const cls of classes) {
+                if (classBgMap[cls]) {
+                  const st = parseColorToStatus(classBgMap[cls]);
+                  if (st === 'SELESAI PROSES') {
+                    detectedStatus = 'SELESAI PROSES';
+                    break;
+                  } else if (st === 'ON PROSES' && (detectedStatus as StatusCategory) !== 'SELESAI PROSES') {
+                    detectedStatus = 'ON PROSES';
                   }
                 }
               }
+            }
 
-              const inlineMatch = td.match(/background(?:-color)?\s*:\s*([^;\"\}]+)/i);
-              if (inlineMatch) {
-                const st = parseColorToStatus(inlineMatch[1]);
-                if (st === 'SELESAI PROSES') {
-                  detectedStatus = 'SELESAI PROSES';
-                  break;
-                } else if (st === 'ON PROSES' && (detectedStatus as StatusCategory) !== 'SELESAI PROSES') {
-                  detectedStatus = 'ON PROSES';
-                }
+            const inlineMatch = td.match(/background(?:-color)?\s*:\s*([^;\"\}]+)/i);
+            if (inlineMatch) {
+              const st = parseColorToStatus(inlineMatch[1]);
+              if (st === 'SELESAI PROSES') {
+                detectedStatus = 'SELESAI PROSES';
+                break;
+              } else if (st === 'ON PROSES' && (detectedStatus as StatusCategory) !== 'SELESAI PROSES') {
+                detectedStatus = 'ON PROSES';
               }
-
-              if (detectedStatus === 'SELESAI PROSES') break;
             }
 
-            if (sheetRowNumber !== null) {
-              htmlRowStatusMap.set(sheetRowNumber, detectedStatus);
-            }
-            if (timestamp && name) {
-              htmlComboStatusMap.set(`${timestamp.trim()}||${name.trim()}`, detectedStatus);
-            }
-          });
-        }
+            if (detectedStatus === 'SELESAI PROSES') break;
+          }
+
+          if (sheetRowNumber !== null) {
+            htmlRowStatusMap.set(sheetRowNumber, detectedStatus);
+          }
+          if (timestamp && name) {
+            htmlComboStatusMap.set(`${timestamp.trim()}||${name.trim()}`, detectedStatus);
+          }
+        });
       }
-    } catch (_) {
-      // ignore zip errors
     }
+  } catch (_) {
+    // ignore zip errors
   }
 
   // 3. Process CSV Rows
