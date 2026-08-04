@@ -29,7 +29,7 @@ export async function fetchGoogleSheetDirectly(menuId: DashboardKey): Promise<Da
 
   const { sheetId, columnIndices, columnHeaders, startRow, targetColumns } = config;
 
-  const csvUrls = [
+  const baseUrls = [
     `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`,
     `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`,
     `https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv`
@@ -38,7 +38,13 @@ export async function fetchGoogleSheetDirectly(menuId: DashboardKey): Promise<Da
   let csvText: string | null = null;
   let fetchError: any = null;
 
-  for (const url of csvUrls) {
+  const candidateUrls: string[] = [];
+  for (const url of baseUrls) {
+    candidateUrls.push(url);
+    candidateUrls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+  }
+
+  for (const url of candidateUrls) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -46,14 +52,45 @@ export async function fetchGoogleSheetDirectly(menuId: DashboardKey): Promise<Da
       clearTimeout(timeoutId);
 
       if (res.ok) {
-        const text = await res.text();
-        if (text && !text.trim().startsWith('<!DOCTYPE') && !text.trim().startsWith('<html')) {
-          csvText = text;
-          break;
+        let text = await res.text();
+        if (text) {
+          if (text.trim().startsWith('{') && text.includes('"contents"')) {
+            try {
+              const parsedJson = JSON.parse(text);
+              if (parsedJson.contents) {
+                text = parsedJson.contents;
+              }
+            } catch (_) {
+              // ignore JSON parse error
+            }
+          }
+
+          if (text && !text.trim().startsWith('<!DOCTYPE') && !text.trim().startsWith('<html')) {
+            csvText = text;
+            break;
+          }
         }
       }
     } catch (err) {
       fetchError = err;
+    }
+  }
+
+  if (!csvText) {
+    for (const url of baseUrls) {
+      try {
+        const jsonUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+        const res = await fetch(jsonUrl);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.contents && !data.contents.trim().startsWith('<!DOCTYPE') && !data.contents.trim().startsWith('<html')) {
+            csvText = data.contents;
+            break;
+          }
+        }
+      } catch (err) {
+        fetchError = err;
+      }
     }
   }
 
