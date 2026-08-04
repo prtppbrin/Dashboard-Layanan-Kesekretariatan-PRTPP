@@ -1,0 +1,6 @@
+{
+  "name": "Dashboard Layanan Kesekretariatan PR TPP BRIN",
+  "description": "Dashboard Monitoring Layanan Kesekretariatan Pusat Riset Teknologi dan Proses Pangan (PR TPP BRIN) yang tersinkronisasi otomatis dengan Google Sheet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
