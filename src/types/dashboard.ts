@@ -14,7 +14,6 @@ export interface DashboardMenuConfig {
   hasStatusFilter: boolean;
   statusColumnKey?: string;
   statusColumnHeader?: string;
-  scriptUrl?: string;
   iconName: string;
   columnHeaders?: string[];
   badgeColor?: string;

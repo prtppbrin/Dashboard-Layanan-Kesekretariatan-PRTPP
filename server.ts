@@ -112,125 +112,35 @@ async function startServer() {
     let countDalamAntrian = 0;
     let isLiveSuccess = false;
 
-    // 0. APPS SCRIPT WEB APP ENDPOINT (If configured)
-    if (config.scriptUrl) {
+    // 1. PRIMARY METHOD: Fetch full CSV Data (Source of truth for all rows including hidden ones)
+    let csvText: string | null = null;
+    const csvUrls = [
+      `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`,
+      `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`,
+      `https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv`
+    ];
+
+    for (const url of csvUrls) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
-        const scriptRes = await fetch(config.scriptUrl, {
+        const timeoutId = setTimeout(() => controller.abort(), 7000);
+        const response = await fetch(url, {
           signal: controller.signal,
-          redirect: 'follow',
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
           }
         });
         clearTimeout(timeoutId);
 
-        if (scriptRes.ok) {
-          const json = await scriptRes.json();
-          if (json && Array.isArray(json.rows) && json.rows.length > 0) {
-            const headerRowIdx = Math.max(0, startRow - 2);
-            if (json.rows[headerRowIdx] && json.rows[headerRowIdx].data) {
-              const headerCells = json.rows[headerRowIdx].data;
-              effectiveHeaders = columnIndices.map((colIdx, idx) => {
-                if (columnHeaders && columnHeaders[idx]) {
-                  return columnHeaders[idx];
-                }
-                const val = headerCells[colIdx] !== undefined ? String(headerCells[colIdx]).trim() : '';
-                return val || `Kolom ${targetColumns[idx]}`;
-              });
-            }
-
-            filteredSheetRows = [];
-            countTotal = 0;
-            countSelesai = 0;
-            countOnProses = 0;
-            countDalamAntrian = 0;
-
-            const targetStartIdx = Math.max(1, startRow - 1);
-            for (let i = targetStartIdx; i < json.rows.length; i++) {
-              const item = json.rows[i];
-              if (!item || !item.data) continue;
-              const row = item.data;
-              const colors = item.colors || [];
-
-              const selectedCols = columnIndices.map(idx => (row[idx] !== undefined ? String(row[idx]).trim() : ''));
-              if (selectedCols.every(val => val === '')) continue;
-
-              const rawMap: Record<string, string> = {};
-              targetColumns.forEach((colKey, idx) => {
-                const colIdx = columnIndices[idx];
-                rawMap[colKey] = row[colIdx] !== undefined ? String(row[colIdx]).trim() : '';
-              });
-
-              let statusValue: StatusCategory = 'DALAM ANTRIAN PROSES';
-              for (const c of colors) {
-                if (!c) continue;
-                const st = parseColorToStatus(c);
-                if (st === 'SELESAI PROSES') {
-                  statusValue = 'SELESAI PROSES';
-                  break;
-                } else if (st === 'ON PROSES') {
-                  statusValue = 'ON PROSES';
-                }
-              }
-
-              if (statusValue === 'SELESAI PROSES') countSelesai++;
-              else if (statusValue === 'ON PROSES') countOnProses++;
-              else countDalamAntrian++;
-
-              countTotal++;
-
-              filteredSheetRows.push({
-                id: `${menuId}-${item.rowIndex || (i + 1)}`,
-                rowIndex: item.rowIndex || (i + 1),
-                columns: selectedCols,
-                rawValues: rawMap,
-                status: statusValue
-              });
-            }
-
-            if (filteredSheetRows.length > 0) {
-              isLiveSuccess = true;
-            }
+        if (response.ok) {
+          const text = await response.text();
+          if (text && !text.trim().startsWith('<!DOCTYPE') && !text.trim().startsWith('<html')) {
+            csvText = text;
+            break;
           }
         }
-      } catch (scriptErr) {
-        console.warn(`Apps Script fetch failed for ${menuId}:`, scriptErr);
-      }
-    }
-
-    // 1. PRIMARY METHOD: Fetch full CSV Data (Source of truth for all rows including hidden ones)
-    let csvText: string | null = null;
-    if (!isLiveSuccess) {
-      const csvUrls = [
-        `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`,
-        `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`,
-        `https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv`
-      ];
-
-      for (const url of csvUrls) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 7000);
-          const response = await fetch(url, {
-            signal: controller.signal,
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-          });
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const text = await response.text();
-            if (text && !text.trim().startsWith('<!DOCTYPE') && !text.trim().startsWith('<html')) {
-              csvText = text;
-              break;
-            }
-          }
-        } catch (err) {
-          // ignore
-        }
+      } catch (err) {
+        // ignore
       }
     }
 
@@ -239,115 +149,113 @@ async function startServer() {
     const htmlComboStatusMap = new Map<string, StatusCategory>();
     let isZipParsed = false;
 
-    if (!isLiveSuccess) {
-      try {
-        const zipUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=zip`;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 9000);
-        const zipRes = await fetch(zipUrl, {
-          signal: controller.signal,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
-        });
-        clearTimeout(timeoutId);
+    try {
+      const zipUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=zip`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 9000);
+      const zipRes = await fetch(zipUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      clearTimeout(timeoutId);
 
-        if (zipRes.ok) {
-          const buffer = Buffer.from(await zipRes.arrayBuffer());
-          const zip = new AdmZip(buffer);
-          const entries = zip.getEntries();
-          const htmlEntry = entries.find(e => e.entryName.endsWith('.html'));
+      if (zipRes.ok) {
+        const buffer = Buffer.from(await zipRes.arrayBuffer());
+        const zip = new AdmZip(buffer);
+        const entries = zip.getEntries();
+        const htmlEntry = entries.find(e => e.entryName.endsWith('.html'));
 
-          if (htmlEntry) {
-            isZipParsed = true;
-            const htmlText = htmlEntry.getData().toString('utf8');
-            const styleMatch = htmlText.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-            const styleText = styleMatch ? styleMatch[1] : '';
+        if (htmlEntry) {
+          isZipParsed = true;
+          const htmlText = htmlEntry.getData().toString('utf8');
+          const styleMatch = htmlText.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+          const styleText = styleMatch ? styleMatch[1] : '';
 
-            const classBgMap: Record<string, string> = {};
-            const sRules = styleText.match(/\.s\d+\{[^}]*\}/gi) || [];
-            sRules.forEach(r => {
-              const clsMatch = r.match(/\.s\d+/);
-              if (!clsMatch) return;
-              const cls = clsMatch[0].slice(1);
-              const bgMatch = r.match(/background-color:\s*([^;\}]+)/i);
-              if (bgMatch) {
-                classBgMap[cls] = bgMatch[1].trim().toLowerCase();
-              }
-            });
+          const classBgMap: Record<string, string> = {};
+          const sRules = styleText.match(/\.s\d+\{[^}]*\}/gi) || [];
+          sRules.forEach(r => {
+            const clsMatch = r.match(/\.s\d+/);
+            if (!clsMatch) return;
+            const cls = clsMatch[0].slice(1);
+            const bgMatch = r.match(/background-color:\s*([^;\}]+)/i);
+            if (bgMatch) {
+              classBgMap[cls] = bgMatch[1].trim().toLowerCase();
+            }
+          });
 
-            const trs = htmlText.match(/<tr[\s\S]*?<\/tr>/gi) || [];
-            trs.forEach(tr => {
-              let sheetRowNumber: number | null = null;
-              const rowNumMatch = tr.match(/class="row-header-wrapper"[^>]*>\s*(\d+)\s*<\/div>/i);
-              if (rowNumMatch) {
-                sheetRowNumber = parseInt(rowNumMatch[1], 10);
-              }
+          const trs = htmlText.match(/<tr[\s\S]*?<\/tr>/gi) || [];
+          trs.forEach(tr => {
+            let sheetRowNumber: number | null = null;
+            const rowNumMatch = tr.match(/class="row-header-wrapper"[^>]*>\s*(\d+)\s*<\/div>/i);
+            if (rowNumMatch) {
+              sheetRowNumber = parseInt(rowNumMatch[1], 10);
+            }
 
-              const tdMatches = tr.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || [];
-              if (tdMatches.length === 0) return;
+            const tdMatches = tr.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || [];
+            if (tdMatches.length === 0) return;
 
-              const allCellValues = tdMatches.map(td => td.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim());
-              const timestamp = allCellValues[0] || '';
-              const name = allCellValues[1] || '';
+            const allCellValues = tdMatches.map(td => td.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim());
+            const timestamp = allCellValues[0] || '';
+            const name = allCellValues[1] || '';
 
-              let detectedStatus: StatusCategory = 'DALAM ANTRIAN PROSES';
+            let detectedStatus: StatusCategory = 'DALAM ANTRIAN PROSES';
 
-              const checkColIndices = Array.from(new Set([
-                ...columnIndices,
-                ...Array.from({ length: Math.min(14, tdMatches.length) }, (_, idx) => idx)
-              ]));
+            const checkColIndices = Array.from(new Set([
+              ...columnIndices,
+              ...Array.from({ length: Math.min(14, tdMatches.length) }, (_, idx) => idx)
+            ]));
 
-              for (const colIdx of checkColIndices) {
-                const td = tdMatches[colIdx];
-                if (!td) continue;
+            for (const colIdx of checkColIndices) {
+              const td = tdMatches[colIdx];
+              if (!td) continue;
 
-                const classMatch = td.match(/class=\"([^\"]*)\"/i);
-                if (classMatch) {
-                  const classes = classMatch[1].split(/\s+/);
-                  for (const cls of classes) {
-                    if (classBgMap[cls]) {
-                      const st = parseColorToStatus(classBgMap[cls]);
-                      if (st === 'SELESAI PROSES') {
-                        detectedStatus = 'SELESAI PROSES';
-                        break;
-                      } else if (st === 'ON PROSES' && (detectedStatus as StatusCategory) !== 'SELESAI PROSES') {
-                        detectedStatus = 'ON PROSES';
-                      }
+              const classMatch = td.match(/class=\"([^\"]*)\"/i);
+              if (classMatch) {
+                const classes = classMatch[1].split(/\s+/);
+                for (const cls of classes) {
+                  if (classBgMap[cls]) {
+                    const st = parseColorToStatus(classBgMap[cls]);
+                    if (st === 'SELESAI PROSES') {
+                      detectedStatus = 'SELESAI PROSES';
+                      break;
+                    } else if (st === 'ON PROSES' && (detectedStatus as StatusCategory) !== 'SELESAI PROSES') {
+                      detectedStatus = 'ON PROSES';
                     }
                   }
                 }
+              }
 
-                const inlineMatch = td.match(/background(?:-color)?\s*:\s*([^;\"\}]+)/i);
-                if (inlineMatch) {
-                  const st = parseColorToStatus(inlineMatch[1]);
-                  if (st === 'SELESAI PROSES') {
-                    detectedStatus = 'SELESAI PROSES';
-                    break;
-                  } else if (st === 'ON PROSES' && (detectedStatus as StatusCategory) !== 'SELESAI PROSES') {
-                    detectedStatus = 'ON PROSES';
-                  }
+              const inlineMatch = td.match(/background(?:-color)?\s*:\s*([^;\"\}]+)/i);
+              if (inlineMatch) {
+                const st = parseColorToStatus(inlineMatch[1]);
+                if (st === 'SELESAI PROSES') {
+                  detectedStatus = 'SELESAI PROSES';
+                  break;
+                } else if (st === 'ON PROSES' && (detectedStatus as StatusCategory) !== 'SELESAI PROSES') {
+                  detectedStatus = 'ON PROSES';
                 }
-
-                if ((detectedStatus as StatusCategory) === 'SELESAI PROSES') break;
               }
 
-              if (sheetRowNumber !== null) {
-                htmlRowStatusMap.set(sheetRowNumber, detectedStatus);
-              }
-              if (timestamp && name) {
-                htmlComboStatusMap.set(`${timestamp.trim()}||${name.trim()}`, detectedStatus);
-              }
-            });
-          }
+              if ((detectedStatus as StatusCategory) === 'SELESAI PROSES') break;
+            }
+
+            if (sheetRowNumber !== null) {
+              htmlRowStatusMap.set(sheetRowNumber, detectedStatus);
+            }
+            if (timestamp && name) {
+              htmlComboStatusMap.set(`${timestamp.trim()}||${name.trim()}`, detectedStatus);
+            }
+          });
         }
-      } catch (zipErr) {
-        console.warn(`ZIP fetch helper failed for ${menuId}:`, zipErr);
       }
+    } catch (zipErr) {
+      console.warn(`ZIP fetch helper failed for ${menuId}:`, zipErr);
     }
 
     // 3. PROCESS CSV ROWS WITH HTML MAP
-    if (!isLiveSuccess && csvText) {
+    if (csvText) {
       const parseResult = Papa.parse<string[]>(csvText, { skipEmptyLines: false });
       const rawRows = parseResult.data || [];
       const targetStartIdx = Math.max(0, startRow - 1);
