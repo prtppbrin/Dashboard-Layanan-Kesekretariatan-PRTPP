@@ -85,17 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {currentMenu !== 'home' && currentConfig && (
-            <button
-              id="sheet-info-button"
-              onClick={onOpenSheetInfo}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700 transition-colors"
-              title="Lihat Detail Sumber Data Google Sheet"
-            >
-              <Info className="w-4 h-4 text-rose-500" />
-              <span className="hidden sm:inline">Info Source ID</span>
-            </button>
-          )}
+          {/* Info button removed as requested */}
 
           {currentMenu !== 'home' && onRefreshCurrent && (
             <button
