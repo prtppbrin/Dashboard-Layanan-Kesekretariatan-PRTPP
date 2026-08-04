@@ -8,6 +8,7 @@ import { RowDetailModal } from './components/RowDetailModal';
 import { DashboardKey, DashboardDataResponse, SheetRowData } from './types/dashboard';
 import { MENU_CONFIGS } from './data/menuConfig';
 import { MOCK_DASHBOARD_DATA } from './data/mockData';
+import { fetchGoogleSheetDirectly } from './utils/sheetParser';
 
 export default function App() {
   const [currentMenu, setCurrentMenu] = useState<DashboardKey>('home');
@@ -35,10 +36,20 @@ export default function App() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but received ${contentType || 'non-JSON'}`);
+      }
       const data: DashboardDataResponse = await response.json();
       setDashboardDataMap(prev => ({ ...prev, [menuId]: data }));
     } catch (err) {
-      console.warn(`Fetch failed for ${menuId}, keeping fallback mock data:`, err);
+      console.warn(`API fetch failed for ${menuId}, attempting direct Google Sheet fetch:`, err);
+      try {
+        const directData = await fetchGoogleSheetDirectly(menuId);
+        setDashboardDataMap(prev => ({ ...prev, [menuId]: directData }));
+      } catch (directErr) {
+        console.error(`Direct Google Sheet fetch also failed for ${menuId}:`, directErr);
+      }
     } finally {
       setLoadingMap(prev => ({ ...prev, [menuId]: false }));
     }
