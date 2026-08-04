@@ -31,7 +31,12 @@ export const MENU_CONFIGS: DashboardMenuConfig[] = [
       'PIC kegiatan riset',
       'Status usulan telaah'
     ],
-    badgeColor: 'blue'
+    badgeColor: 'blue',
+    picInfo: {
+      name: 'Allen Relyan Wijaya',
+      role: 'Kerjasama PR TPP',
+      waUrl: 'https://wa.me/6285643415448'
+    }
   },
   {
     id: 'surat-tugas',
@@ -53,7 +58,12 @@ export const MENU_CONFIGS: DashboardMenuConfig[] = [
       'Tempat Pelaksanaan',
       'Personil Yang Ikut Serta'
     ],
-    badgeColor: 'emerald'
+    badgeColor: 'emerald',
+    picInfo: {
+      name: 'Yeny Indri Hapsari',
+      role: 'Surat Tugas',
+      waUrl: 'https://wa.me/6287884771566'
+    }
   },
   {
     id: 'bimbingan-magang',
@@ -76,7 +86,12 @@ export const MENU_CONFIGS: DashboardMenuConfig[] = [
       'Universitas',
       'Tanggal Mulai - Tanggal Selesai'
     ],
-    badgeColor: 'violet'
+    badgeColor: 'violet',
+    picInfo: {
+      name: 'Yeny Indri Hapsari',
+      role: 'Surat Balasan Bimbingan',
+      waUrl: 'https://wa.me/6287884771566'
+    }
   },
   {
     id: 'surat-tugas-dbr',
@@ -97,7 +112,12 @@ export const MENU_CONFIGS: DashboardMenuConfig[] = [
       'Tempat Pelaksanaan',
       'Personil Yang Ikut Serta'
     ],
-    badgeColor: 'amber'
+    badgeColor: 'amber',
+    picInfo: {
+      name: 'Yeny Indri Hapsari',
+      role: 'Surat Tugas DBR',
+      waUrl: 'https://wa.me/6287884771566'
+    }
   },
   {
     id: 'nota-dinas-bosdm',
@@ -117,6 +137,11 @@ export const MENU_CONFIGS: DashboardMenuConfig[] = [
       'Tanggal Mulai Mengajar/Membimbing',
       'Jenis Program'
     ],
-    badgeColor: 'rose'
+    badgeColor: 'rose',
+    picInfo: {
+      name: 'Yeny Indri Hapsari',
+      role: 'Nota Dinas ke BOSDM',
+      waUrl: 'https://wa.me/6287884771566'
+    }
   }
 ];

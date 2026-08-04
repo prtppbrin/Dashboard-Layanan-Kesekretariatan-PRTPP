@@ -145,6 +145,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       {menu.subtitle}
                     </p>
                   )}
+
+                  {/* PIC WhatsApp Button */}
+                  {menu.picInfo && (
+                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 truncate" title={`PIC: ${menu.picInfo.name}`}>
+                        PIC: {menu.picInfo.name}
+                      </span>
+                      <a
+                        href={menu.picInfo.waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition-all hover:scale-105 shrink-0"
+                      >
+                        <span>Klik me</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Bottom Row Stats & Navigation Arrow */}

@@ -15,7 +15,8 @@ import {
   Eye,
   Sparkles,
   FileSpreadsheet,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 import { DashboardKey, DashboardDataResponse, SheetRowData, StatusCategory } from '../types/dashboard';
 import { DashboardMenuConfig } from '../types/dashboard';
@@ -161,68 +162,103 @@ export const DashboardTable: React.FC<DashboardTableProps> = ({
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
       {/* Top Banner & Description */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-              PR TPP BRIN
-            </span>
-          </div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
-            {config.title}
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {config.subtitle}
-          </p>
-        </div>
-
-        {/* Sync Status Info & Auto Refresh Options */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <div className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${data?.isLive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
-            <span>{data?.isLive ? 'Google Sheets Live' : 'Fallback Mode'}</span>
-            <span className="text-slate-400 font-mono text-[11px]">({data?.lastUpdated || 'Now'})</span>
+      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                PR TPP BRIN
+              </span>
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
+              {config.title}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {config.subtitle}
+            </p>
           </div>
 
-          {/* Auto Refresh Select Dropdown */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
-            <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[11px] text-slate-500 hidden sm:inline">Auto Sync:</span>
-            <select
-              value={autoSyncInterval}
-              onChange={(e) => onChangeAutoSync(Number(e.target.value))}
-              className="bg-transparent font-medium text-xs text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer"
+          {/* Sync Status Info & Auto Refresh Options */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${data?.isLive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+              <span>{data?.isLive ? 'Google Sheets Live' : 'Fallback Mode'}</span>
+              <span className="text-slate-400 font-mono text-[11px]">({data?.lastUpdated || 'Now'})</span>
+            </div>
+
+            {/* Auto Refresh Select Dropdown */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
+              <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-[11px] text-slate-500 hidden sm:inline">Auto Sync:</span>
+              <select
+                value={autoSyncInterval}
+                onChange={(e) => onChangeAutoSync(Number(e.target.value))}
+                className="bg-transparent font-medium text-xs text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer"
+              >
+                <option value={0} className="dark:bg-slate-900">Matikan</option>
+                <option value={15} className="dark:bg-slate-900">15 Detik</option>
+                <option value={30} className="dark:bg-slate-900">30 Detik</option>
+                <option value={60} className="dark:bg-slate-900">1 Menit</option>
+                <option value={300} className="dark:bg-slate-900">5 Menit</option>
+              </select>
+            </div>
+
+            <button
+              onClick={() => setShowChart(!showChart)}
+              className={`px-3 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition-all ${
+                showChart
+                  ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
+                  : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+              }`}
+              title="Tampilkan / sembunyikan grafik data"
             >
-              <option value={0} className="dark:bg-slate-900">Matikan</option>
-              <option value={15} className="dark:bg-slate-900">15 Detik</option>
-              <option value={30} className="dark:bg-slate-900">30 Detik</option>
-              <option value={60} className="dark:bg-slate-900">1 Menit</option>
-              <option value={300} className="dark:bg-slate-900">5 Menit</option>
-            </select>
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{showChart ? 'Sembunyikan Grafik' : 'Grafik Data'}</span>
+            </button>
+
+            <button
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition-colors disabled:opacity-50"
+              title="Refresh manual data dari Google Sheets"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
-
-          <button
-            onClick={() => setShowChart(!showChart)}
-            className={`px-3 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition-all ${
-              showChart
-                ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
-                : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-            }`}
-            title="Tampilkan / sembunyikan grafik data"
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{showChart ? 'Sembunyikan Grafik' : 'Grafik Data'}</span>
-          </button>
-
-          <button
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition-colors disabled:opacity-50"
-            title="Refresh manual data dari Google Sheets"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
+
+        {/* PIC Contact Button Banner */}
+        {config.picInfo && (
+          <div className="mt-2 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-emerald-50/90 dark:from-emerald-950/40 dark:via-teal-950/20 dark:to-emerald-950/40 p-4 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                  <span>PIC {config.picInfo.role} :</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-extrabold">{config.picInfo.name}</span>
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Hubungi PIC via WhatsApp untuk koordinasi layanan {config.title.includes('PR TPP') ? `${config.title} BRIN` : `${config.title} PR TPP BRIN`}
+                </p>
+              </div>
+            </div>
+
+            <a
+              href={config.picInfo.waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 cursor-pointer"
+            >
+              <span>Klik me</span>
+              <span className="text-[11px] opacity-90 font-semibold border-l border-emerald-400/80 pl-2 ml-1">
+                PIC {config.picInfo.name}
+              </span>
+              <ExternalLink className="w-4 h-4 ml-0.5" />
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Visual Chart Section */}

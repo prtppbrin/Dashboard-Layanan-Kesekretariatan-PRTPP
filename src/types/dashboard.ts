@@ -2,6 +2,12 @@ export type DashboardKey = 'home' | 'kerjasama' | 'surat-tugas' | 'bimbingan-mag
 
 export type StatusCategory = 'SELESAI PROSES' | 'ON PROSES' | 'DALAM ANTRIAN PROSES';
 
+export interface PicInfo {
+  name: string;
+  role: string;
+  waUrl: string;
+}
+
 export interface DashboardMenuConfig {
   id: DashboardKey;
   title: string;
@@ -17,6 +23,7 @@ export interface DashboardMenuConfig {
   iconName: string;
   columnHeaders?: string[];
   badgeColor?: string;
+  picInfo?: PicInfo;
 }
 
 export interface SheetRowData {
