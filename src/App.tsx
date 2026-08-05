@@ -16,7 +16,16 @@ export default function App() {
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [lastUpdatedAll, setLastUpdatedAll] = useState<string>('');
-  const [autoSyncInterval, setAutoSyncInterval] = useState<number>(3600); // 1 hour default auto sync
+  const [autoSyncInterval, setAutoSyncInterval] = useState<number>(3600);
+
+  // Auto sync interval default per dashboard: 24h for Kerjasama PR TPP, 1h for others
+  useEffect(() => {
+    if (currentMenu === 'kerjasama') {
+      setAutoSyncInterval(86400);
+    } else {
+      setAutoSyncInterval(3600);
+    }
+  }, [currentMenu]);
 
   // Search & Modals State
   const [searchQuery, setSearchQuery] = useState('');

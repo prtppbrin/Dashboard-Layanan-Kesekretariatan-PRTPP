@@ -196,9 +196,15 @@ export const DashboardTable: React.FC<DashboardTableProps> = ({
                 className="bg-transparent font-medium text-xs text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer"
               >
                 <option value={0} className="dark:bg-slate-900">Matikan</option>
-                <option value={3600} className="dark:bg-slate-900">1 Jam (Default)</option>
-                <option value={21600} className="dark:bg-slate-900">6 Jam</option>
-                <option value={86400} className="dark:bg-slate-900">24 Jam</option>
+                {config.id === 'kerjasama' ? (
+                  <option value={86400} className="dark:bg-slate-900">24 Jam (Default)</option>
+                ) : (
+                  <>
+                    <option value={3600} className="dark:bg-slate-900">1 Jam (Default)</option>
+                    <option value={21600} className="dark:bg-slate-900">6 Jam</option>
+                    <option value={86400} className="dark:bg-slate-900">24 Jam</option>
+                  </>
+                )}
               </select>
             </div>
 
