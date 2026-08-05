@@ -20,8 +20,9 @@ export const MENU_CONFIGS: DashboardMenuConfig[] = [
     targetColumns: ['A', 'B', 'C', 'D', 'E', 'F'],
     columnIndices: [colToIdx('A'), colToIdx('B'), colToIdx('C'), colToIdx('D'), colToIdx('E'), colToIdx('F')],
     startRow: 4,
-    hasStatusFilter: false,
+    hasStatusFilter: true,
     statusColumnKey: 'F',
+    statusColumnHeader: 'Keterangan',
     iconName: 'Handshake',
     columnHeaders: [
       'No',

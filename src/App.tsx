@@ -16,7 +16,7 @@ export default function App() {
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [lastUpdatedAll, setLastUpdatedAll] = useState<string>('');
-  const [autoSyncInterval, setAutoSyncInterval] = useState<number>(30); // 30 seconds default auto sync
+  const [autoSyncInterval, setAutoSyncInterval] = useState<number>(3600); // 1 hour default auto sync
 
   // Search & Modals State
   const [searchQuery, setSearchQuery] = useState('');

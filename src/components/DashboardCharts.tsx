@@ -35,15 +35,15 @@ export const HomeOverviewCharts: React.FC<HomeOverviewChartsProps> = ({ dashboar
     else if (m.id === 'surat-tugas-dbr') shortName = 'ST DBR';
     else if (m.id === 'nota-dinas-bosdm') shortName = 'Nota Dinas';
 
-    const isKerjasama = m.id === 'kerjasama' || !m.hasStatusFilter;
+    const hasFilter = m.hasStatusFilter;
 
     return {
       name: shortName,
       fullTitle: m.title,
       Total: stats.total,
-      Selesai: isKerjasama ? stats.total : stats.selesai,
-      'On Proses': isKerjasama ? 0 : stats.onProses,
-      'Dalam Antrian': isKerjasama ? 0 : stats.dalamAntrian,
+      Selesai: !hasFilter ? stats.total : stats.selesai,
+      'On Proses': !hasFilter ? 0 : stats.onProses,
+      'Dalam Antrian': !hasFilter ? 0 : stats.dalamAntrian,
       hasFilter: m.hasStatusFilter
     };
   });
@@ -57,7 +57,8 @@ export const HomeOverviewCharts: React.FC<HomeOverviewChartsProps> = ({ dashboar
   Object.entries(dashboardDataMap).forEach(([key, d]: [string, DashboardDataResponse]) => {
     if (d?.stats) {
       totalAll += d.stats.total || 0;
-      if (key === 'kerjasama') {
+      const menuConf = MENU_CONFIGS.find(m => m.id === key);
+      if (menuConf && !menuConf.hasStatusFilter) {
         totalSelesai += d.stats.total || 0;
       } else {
         totalSelesai += d.stats.selesai || 0;
