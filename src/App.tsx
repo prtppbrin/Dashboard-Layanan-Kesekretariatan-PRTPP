@@ -106,9 +106,6 @@ export default function App() {
           onSelectMenu={(menu) => {
             setCurrentMenu(menu);
             setSearchQuery('');
-            if (menu !== 'home') {
-              fetchDashboardData(menu);
-            }
           }}
           isSyncing={isSyncingAll}
           onRefreshAll={fetchAllDashboards}
@@ -139,9 +136,6 @@ export default function App() {
                 onSelectMenu={(menu) => {
                   setCurrentMenu(menu);
                   setSearchQuery('');
-                  if (menu !== 'home') {
-                    fetchDashboardData(menu);
-                  }
                 }}
                 dashboardDataMap={dashboardDataMap}
                 isSyncingAll={isSyncingAll}
