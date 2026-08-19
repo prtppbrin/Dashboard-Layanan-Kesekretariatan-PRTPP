@@ -89,9 +89,9 @@ export const MENU_CONFIGS: DashboardMenuConfig[] = [
     ],
     badgeColor: 'violet',
     picInfo: {
-      name: 'Yeny Indri Hapsari',
+      name: 'Allen Relyan Wijaya',
       role: 'Surat Balasan Bimbingan',
-      waUrl: 'https://wa.me/6287884771566'
+      waUrl: 'https://wa.me/6285643415448'
     }
   },
   {
@@ -140,9 +140,9 @@ export const MENU_CONFIGS: DashboardMenuConfig[] = [
     ],
     badgeColor: 'rose',
     picInfo: {
-      name: 'Yeny Indri Hapsari',
+      name: 'Allen Relyan Wijaya',
       role: 'Nota Dinas ke BOSDM',
-      waUrl: 'https://wa.me/6287884771566'
+      waUrl: 'https://wa.me/6285643415448'
     }
   }
 ];
